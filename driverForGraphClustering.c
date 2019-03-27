@@ -3,13 +3,14 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
-#include <sys/time.h>
+#include <time.h>
 #include <omp.h>
 #include <unistd.h> //For getopts()
 #include <getopt.h> //For getopts()
 #include <stdbool.h> //For bool
 
 //#define DEBUG
+//#define DEBUG_VF
 // struct : community
 typedef struct comm {
     long size;
@@ -589,6 +590,9 @@ bool loadMetisFileFormat(graph *G, const char* filename) {
             break;
     } // End of switch(value)
 
+    // Close the damn file! 
+    fclose(fin);
+    
     // Populate the graph structure
     G->numVertices = mNVer;
     G->sVertices = mNVer;
@@ -596,8 +600,6 @@ bool loadMetisFileFormat(graph *G, const char* filename) {
     G->edgeListPtrs = mVerPtr;
     G->edgeList = mEdgeList;
 
-    // Close the damn file! 
-    fclose(fin);
     return true;
 } // End 
 
@@ -655,6 +657,58 @@ void displayGraphCharacteristics(graph* G) {
     }
 }
 
+// function : vertexFollowing
+long vertexFollowing(graph* G, long* C) {
+    printf("Inside vertexFollowing\n");
+    long NV = G->numVertices;
+    long *vtxPtr = G->edgeListPtrs;
+    edge *vtxInd = G->edgeList;
+    long numNode = 0;
+    clock_t start = clock();
+
+    // Initialize the communities
+    // Don't understand the point of it now
+    //#pragma omp parallel for  //Parallelize on the outer most loop
+    for (long i = 0; i < NV; i++) {
+        C[i] = i; // Initialize each vertex to its own cluster
+    }
+
+    // Remove isolated and degree-one vertices
+    //#pragma omp parallel for
+    for (long i = 0; i < NV; i++) {
+        long adj1 = vtxPtr[i];
+        long adj2 = vtxPtr[i+1];
+        if (adj1 == adj2) { // Isolated vertex
+            C[i] = -1;
+            //__sync_fetch_and_add(&numNode, 1);
+            numNode += 1;
+        } else if ((adj2 - adj1) == 1) { // Degree one
+            // Check if the tail has degree of greater than 1
+            long tail = vtxInd[adj1].tail;
+            long adj11 = vtxPtr[tail];
+            long adj12 = vtxPtr[tail+1];
+            if ((adj12 - adj11) > 1 || i > tail) { // Degree of tail is greater than 1
+                //__sync_fetch_and_add(&numNode, 1);
+                numNode += 1;
+                C[i] = tail;
+            } // else, chill!
+        } 
+    } // End of for
+    start = clock() - start;
+#ifdef DEBUG_VF
+    printf("Time to determine number of vertices (numNode) to fix: %lf\n", (double)start/CLOCKS_PER_SEC);
+#endif
+    return numNode;
+}
+
+// function : renumberClustersContiguously
+// WARNING : will overwrite the old cluster
+// Returns the number of unique clusters
+long renumberClustersContiguously(long* C, long size) {
+    printf("Inside renumberClustersContiguously\n");
+}
+
+
 // function : main
 int main(int argc, char** argv) {
     // Step1 : Parse Input Parameters
@@ -710,6 +764,33 @@ if (fType == 5) {
 }
 
 displayGraphCharacteristics(G);
+int coloring = 0;
+if (inputParams->coloring) {
+    coloring = 1;
+}
+
+clock_t start, end;
+double cpu_time_used;
+// Vertex Following option
+if (inputParams->VF) {
+    printf("Vertex following is enabled.\n");
+    start = clock();
+    long numVtxToFix = 0; // Default 0
+    long* C = (long*)malloc(G->numVertices*sizeof(long));
+    assert(C != 0);
+    // Find vertices that follow other vertices
+    numVtxToFix = vertexFollowing(G, C);
+#ifdef DEBUG_VF
+    printf("numVtxToFix : %ld\n", numVtxToFix);
+#endif
+    if (numVtxToFix > 0) { // Need to fix things : build a new graph
+        printf("Graph will be modified -- %ld vertices need to be fixed.\n", numVtxToFix);
+        graph *Gnew = (graph *)malloc(sizeof(graph));
+        
+        free(G);
+        G = Gnew;
+    }
+}
 
 // Free the memory space allocated for struct clusteringParams
 free(inputParams);
