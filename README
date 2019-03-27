@@ -1,0 +1,2 @@
+To run:
+./driverForGraphClustering -v -o -c -m 10 -f 5 karate.graph
