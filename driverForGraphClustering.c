@@ -701,12 +701,142 @@ long vertexFollowing(graph* G, long* C) {
     return numNode;
 }
 
+typedef struct dataItem {
+    long data;
+    long key;
+} dataItem;
+
+// function : hashCode
+long hashCode(long key, long size) {
+    return(key % size);
+}
+
+// function : search
+dataItem* search(long key, long size, dataItem** hashArr) {
+    // get the hash
+    long hashIndex = hashCode(key, size);
+    
+    // move in array until an empty
+    while (hashArr[hashIndex] != NULL) {
+        if (hashArr[hashIndex]->key == key) {
+            return hashArr[hashIndex];
+        }
+
+        // go to the next cell
+        ++hashIndex;
+
+        // wrap around the table
+        hashIndex = hashIndex % size;
+    }
+    return NULL;
+}
+
+// function : displayHashMap
+void displayHashMap(dataItem** hashArr, long size) {
+    for (long i = 0; i < size; i++) {
+        if (hashArr[i] != NULL) {
+            printf("i : %ld = (%ld, %ld)", i, hashArr[i]->key, hashArr[i]->data);
+        } else {
+            printf("i : %ld = ~~ ", i);
+        }
+    }
+    printf("\n");
+}
+
+// function : insert
+void insert(long key, long data, long size, dataItem** hashArr) {
+    dataItem* item = (dataItem*)malloc(sizeof(dataItem));
+    assert(item != 0);
+    item->key = key;
+    item->data = data;
+
+    // get the hash
+    long hashIndex = hashCode(key, size);
+
+    // move in the array until an empty or deleted cell
+    while ((hashArr[hashIndex] != NULL) && (hashArr[hashIndex]->key != -1)) {
+        // go to the next cell
+        ++hashIndex;
+
+        // wrap around the table
+        hashIndex = hashIndex % size;
+    }
+    hashArr[hashIndex] = item;
+}
+
+// function : delete
+dataItem* delete(dataItem* item, long size, dataItem** hashArr) {
+    long key = item->key;
+
+    // get the hash
+    long hashIndex = hashCode(key, size);
+
+    // move in array until an empty
+    while(hashArr[hashIndex] != NULL) {
+        if (hashArr[hashIndex]->key == key) {
+            hashArr[hashIndex]->key = -1;
+            hashArr[hashIndex]->data = -1;
+            return hashArr[hashIndex];
+        }
+        // go to the next cell
+        ++hashIndex;
+
+        // wrap around the table
+        hashIndex %= size;
+    }
+    return NULL;
+}
+
+// function : freeHashArr
+void freeHashArr(dataItem** hashArr, long size) {
+    for (long i = 0; i < size; i++) {
+        free(hashArr[i]);
+    }
+    free(hashArr);
+}
+
 // function : renumberClustersContiguously
 // WARNING : will overwrite the old cluster
 // Returns the number of unique clusters
 long renumberClustersContiguously(long* C, long size) {
     printf("Inside renumberClustersContiguously\n");
+    clock_t start = clock();
+    // count the number of communities and internal edges
+    // map each neighbor's cluster to a local number
+    dataItem** hashArr = (dataItem**)malloc(size * sizeof(dataItem*));
+    for (long i = 0; i < size; i++) {
+        hashArr[i] = NULL;
+    }
+    dataItem* temp = (dataItem*)malloc(sizeof(dataItem));
+
+    long numUniqueClusters = 0;
+
+    // Do this loop in serial
+    // will overwrite the old cluster id with new cluster id
+    for (long i = 0; i < size; i++) {
+        assert(C[i] < size);
+        if (C[i] >= 0) { // only if it is a valid number
+            temp = search(C[i], size, hashArr); // check if it already exists
+            if (temp != NULL) {
+                C[i] = temp->data;
+            } else {
+                insert(C[i], numUniqueClusters, size, hashArr); // Doesn't exist, add to the map
+                C[i] = numUniqueClusters; // Renumber the cluster id
+                numUniqueClusters++; // increment the number
+            }
+        }
+    } // end of for
+    displayHashMap(hashArr, size);
+    freeHashArr(hashArr, size);
+    start = clock() - start;
+    printf("Time to renumber clusters: %lf\n", (double)start/CLOCKS_PER_SEC);
+    return numUniqueClusters; // Return the number of unique cluster ids
 }
+
+// function : buildNewGraphVF
+// WARNING : will assume that cluster id have been renumbered contiguously
+// Return the total time for building the next level of graph
+// This will not add any self-loops
 
 
 // function : main
@@ -786,7 +916,7 @@ if (inputParams->VF) {
     if (numVtxToFix > 0) { // Need to fix things : build a new graph
         printf("Graph will be modified -- %ld vertices need to be fixed.\n", numVtxToFix);
         graph *Gnew = (graph *)malloc(sizeof(graph));
-        
+        long numClusters = renumberClustersContiguously(C, G->numVertices);    
         free(G);
         G = Gnew;
     }
