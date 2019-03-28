@@ -828,6 +828,7 @@ long renumberClustersContiguously(long* C, long size) {
     } // end of for
     displayHashMap(hashArr, size);
     freeHashArr(hashArr, size);
+    free(temp);
     start = clock() - start;
     printf("Time to renumber clusters: %lf\n", (double)start/CLOCKS_PER_SEC);
     return numUniqueClusters; // Return the number of unique cluster ids
@@ -837,7 +838,106 @@ long renumberClustersContiguously(long* C, long size) {
 // WARNING : will assume that cluster id have been renumbered contiguously
 // Return the total time for building the next level of graph
 // This will not add any self-loops
+double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters) {
+   // I don't understand the point of this right now
+   /*
+    int nT;
+    #pragma omp parallel
+    {
+        nT = omp_get_num_threads();
+    }
+    */
+    printf("Inside buildNewGraphVF: # of unique clusters= %ld\n",numUniqueClusters);
+    /*
+    printf("Actual number of threads: %d \n", nT);
+    */
+    clock_t start, end; 
+    double totTime = 0; // For timing purposes
+    double total = 0, totItr = 0;
 
+    // Pointers into the graph structure
+    long NV_in = Gin->numVertices;
+    long NE_in = Gin->numEdges;
+    long* vtxPtrIn = Gin->edgeListPtrs;
+    edge* vtxIndIn = Gin->edgeList;
+
+    start = clock();
+
+    // Pointers into the output graph structure
+    long NV_out = numUniqueClusters;
+    long NE_self = 0; // Not all vertices get self-loops
+    long NE_out = 0; // Cross edges
+    long* vtxPtrOut = (long*)malloc((NV_out+1)*sizeof(long));
+    assert(vtxPtrOut != 0);
+    vtxPtrOut[0] = 0; // First location is always 0
+
+    /* Step 1 : Regroup the node into cluster node */
+    dataItem*** cluPtrIn = (dataItem***)malloc(numUniqueClusters * sizeof(dataItem**));
+    assert(cluPtrIn != 0);
+
+    // Care about it later
+    /* 
+    #pragma omp parallel for
+    */
+    for (long i = 0; i < numUniqueClusters; i++) {
+        cluPtrIn[i] = malloc(sizeof(dataItem*));
+        // Do not add self-loops
+        // (*(cluPtrIn[i]))[i] = 0; //Add for a self loop with zero weight
+    }
+
+    // Care about it later
+    /* 
+    #pragma omp parallel for
+    */
+    for (long i = 0; i < numUniqueClusters; i++) {
+        vtxPtrOut[i] = 0;
+    }
+
+    // Care about this later
+    // Create an array of locks for each cluster
+    /*
+    omp_lock_t *nlocks = (omp_lock_t *) malloc (numUniqueClusters * sizeof(omp_lock_t));
+    assert(nlocks != 0);
+    #pragma omp parallel for
+    for (long i=0; i<numUniqueClusters; i++) {
+        omp_init_lock(&nlocks[i]); //Initialize locks
+    }
+    */
+
+    end = clock();
+    totTime += (double)(end - start)/CLOCKS_PER_SEC;
+    printf("Time to initialize: %3.3lf\n", (double)(end - start)/CLOCKS_PER_SEC);
+    
+    start = clock();
+    // Care about it later
+    /* 
+    #pragma omp parallel for
+    */
+    for (long i = 0; i < NV_in; i++) {
+        if ((C[i] < 0) || (C[i] > numUniqueClusters)) {
+            continue; // Not a valid cluster id
+        }
+        long adj1 = vtxPtrIn[i];
+        long adj2 = vtxPtrIn[i+1];
+        dataItem* temp = (dataItem*)malloc(sizeof(dataItem));
+        assert(temp != 0);
+        // Now look for all the neighbors of this cluster
+        for (long j = adj1; j < adj2; j++) {
+            long tail = vtxIndIn[j].tail;
+            assert(C[tail] < numUniqueClusters);
+            // Add the edge from one endpoint
+            if (C[i] >= C[tail]) {
+                // Care about this later
+                /*
+                omp_set_lock(&nlocks[C[i]]);  // Locking the cluster
+                */
+
+            }
+        }
+    }
+
+
+}
 
 // function : main
 int main(int argc, char** argv) {
