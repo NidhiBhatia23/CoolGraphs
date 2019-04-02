@@ -1014,6 +1014,23 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
     printf("Time to count edges: %3.3lf\n", (double)(end - start)/CLOCKS_PER_SEC);
     assert(vtxPtrOut[NV_out] == (NE_out*2+NE_self)); // Sanity check
 
+    start = clock();
+    // Step 3 : build the edge list:
+    long numEdges = vtxPtrOut[NV_out];
+    long realEdges = NE_out + NE_self; // Self-loops appear once and others appear twice. How?
+    edge* vtxIndOut = (edge*)malloc(numEdges * sizeof(edge));
+    assert(vtxIndOut != 0);
+    long *Added = (long*)malloc(NV_out * sizeof(long)); // Keep track of what got added
+    assert(Added != 0);
+
+    // Don't understand the point right now
+    //#pragma omp parallel for 
+    for (long i = 0; i < NV_out; i++) {
+        Added[i] = 0;
+    }
+
+    // Now add the edges in no particular order
+
     return(0.0);
 }
 
