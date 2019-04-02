@@ -879,17 +879,21 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
     /* 
     #pragma omp parallel for
     */
+
+    // Not sure if needed! Commenting for now
+    /*
     for (long i = 0; i < numUniqueClusters; i++) {
         cluPtrIn[i] = malloc(sizeof(dataItem*));
         // Do not add self-loops
         // (*(cluPtrIn[i]))[i] = 0; //Add for a self loop with zero weight
     }
+    */
 
     // Care about it later
     /* 
     #pragma omp parallel for
     */
-    for (long i = 0; i < numUniqueClusters; i++) {
+    for (long i = 1; i <= numUniqueClusters; i++) {
         vtxPtrOut[i] = 0;
     }
 
@@ -914,29 +918,89 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
     #pragma omp parallel for
     */
     for (long i = 0; i < NV_in; i++) {
-        if ((C[i] < 0) || (C[i] > numUniqueClusters)) {
+        if ( (C[i] < 0) || (C[i] > numUniqueClusters) ) {
             continue; // Not a valid cluster id
         }
         long adj1 = vtxPtrIn[i];
         long adj2 = vtxPtrIn[i+1];
+        printf("adj1 : %ld  adj2 : %ld\n", adj1, adj2);
+        printf("Community of i : %ld is %ld\n", i, C[i]);
         dataItem* temp = (dataItem*)malloc(sizeof(dataItem));
         assert(temp != 0);
+        long size = 0;
+        for (long j = adj1; j < adj2; j++) {
+            long tail = vtxIndIn[j].tail;
+            assert(C[tail] < numUniqueClusters);
+            if (C[i] >= C[tail]) {
+                size++;
+            }
+        }
+        printf("For i=%ld : size is %ld\n", i, size);
+        cluPtrIn[C[i]] = (dataItem**)malloc(size * (sizeof(dataItem)));
+        for (long k = 0; k < size; k++) {
+            cluPtrIn[C[i]][k] = NULL;
+        }
         // Now look for all the neighbors of this cluster
         for (long j = adj1; j < adj2; j++) {
             long tail = vtxIndIn[j].tail;
             assert(C[tail] < numUniqueClusters);
             // Add the edge from one endpoint
-            if (C[i] >= C[tail]) {
+            if (C[i] >= C[tail]) { // Figure out why this condition?
                 // Care about this later
                 /*
                 omp_set_lock(&nlocks[C[i]]);  // Locking the cluster
                 */
-
-            }
-        }
+                printf("tail for i : %ld, j : %ld is %ld\n", i, j, tail);
+                printf("community of tail is C[%ld] : %ld\n", tail, C[tail]);
+                printf("Inside for loop j for i=%ld\n", i);
+                temp = search(C[tail], size, cluPtrIn[C[i]]);
+                if (temp != NULL) {
+                    temp->data += (long)vtxIndIn[j].weight;
+                } else {
+                    printf("inside j : %ld and edge weight is vtxIndIn[%ld].weight : %ld\n", j, j, (long)vtxIndIn[j].weight);
+                    insert(C[tail], (long)vtxIndIn[j].weight, size, cluPtrIn[C[i]]); // Inter-community edge
+                    //__sync_fetch_and_add(&vtxPtrOut[C[i]+1], 1);
+                    vtxPtrOut[C[i]+1] = vtxPtrOut[C[i]+1] + 1;
+                    if (C[i] == C[tail]) {
+                        // Keep track of self edges
+                        //__sync_fetch_and_add(&NE_self, 1);
+                        NE_self++;
+                    }
+                    if (C[i] > C[tail]) {
+                        //Keep track of non-self #edges
+                        //__sync_fetch_and_add(&NE_out, 1);
+                        NE_out++;
+                        //Count edge j-->i
+                        //__sync_fetch_and_add(&vtxPtrOut[C[tail]+1], 1);
+                        vtxPtrOut[C[tail]+1] = vtxPtrOut[C[tail]+1] + 1;
+                    }
+                }
+                /* Dont understand the point of this now
+                omp_unset_lock(&nlocks[C[i]]); // Unlocking the cluster
+                */
+            } // End of if
+        } // End of for(j)
+        displayHashMap(cluPtrIn[C[i]], size);
+        printf("NE_self : %ld\n", NE_self);
+        printf("NE_out : %ld\n", NE_out);
+    } // End of for(i)
+    // Prefix sum:
+    for (long i = 0; i < NV_out; i++) {
+        printf("Prev : i : %ld vtxPtrOut[%ld] : %ld ", i, i, vtxPtrOut[i]);
+        printf("i+1 : %ld vtxPtrOut[%ld] : %ld ", i+1, i+1, vtxPtrOut[i+1]);
+        vtxPtrOut[i+1] = vtxPtrOut[i+1] + vtxPtrOut[i];    
+        printf("New i : %ld vtxPtrOut[%ld] : %ld    ", i, i, vtxPtrOut[i]);
+        printf("New i+1 : %ld vtxPtrOut[%ld] : %ld\n", i+1, i+1, vtxPtrOut[i+1]);
     }
 
+    end = clock();
+    totTime += (double)(end - start)/CLOCKS_PER_SEC;
+    printf("NE_out=%ld  NE_self=%ld\n", NE_out, NE_self);
+    printf("These should match: %ld == %ld\n", (2*NE_out+NE_self), vtxPtrOut[NV_out]);
+    printf("Time to count edges: %3.3lf\n", (double)(end - start)/CLOCKS_PER_SEC);
+    assert(vtxPtrOut[NV_out] == (NE_out*2+NE_self)); // Sanity check
 
+    return(0.0);
 }
 
 // function : main
@@ -1017,6 +1081,7 @@ if (inputParams->VF) {
         printf("Graph will be modified -- %ld vertices need to be fixed.\n", numVtxToFix);
         graph *Gnew = (graph *)malloc(sizeof(graph));
         long numClusters = renumberClustersContiguously(C, G->numVertices);    
+        double test = buildNewGraphVF(G, Gnew, C, numClusters);
         free(G);
         G = Gnew;
     }
