@@ -874,6 +874,8 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
     /* Step 1 : Regroup the node into cluster node */
     dataItem*** cluPtrIn = (dataItem***)malloc(numUniqueClusters * sizeof(dataItem**));
     assert(cluPtrIn != 0);
+    long* sizeArr = (long*)malloc(numUniqueClusters * sizeof(long));
+    assert(sizeArr != 0);
 
     // Care about it later
     /* 
@@ -940,6 +942,7 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
 #ifdef DEBUG_B
         printf("For i=%ld : size is %ld\n", i, size);
 #endif
+        sizeArr[i] = size;
         cluPtrIn[C[i]] = (dataItem**)malloc(size * (sizeof(dataItem)));
         for (long k = 0; k < size; k++) {
             cluPtrIn[C[i]][k] = NULL;
@@ -993,6 +996,7 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
         printf("NE_self : %ld\n", NE_self);
         printf("NE_out : %ld\n", NE_out);
 #endif
+        free(temp);
     } // End of for(i)
     // Prefix sum:
     for (long i = 0; i < NV_out; i++) {
@@ -1030,9 +1034,74 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
     }
 
     // Now add the edges in no particular order
+    // Don't understand the point right now
+    //#pragma omp parallel for
+    dataItem* temp = (dataItem*)malloc(sizeof(dataItem));
+    for (long i = 0; i < NV_out; i++) {
+//#ifdef DEBUG_B
+        printf("i = %ld\n", i);
+//#endif
+        long j = 0;
+        long Where;
+        temp = cluPtrIn[i][j];
+        // Now go through the other edges
+        while (temp != NULL) {
+            // Don't understand the point of this right now
+            //Where = vtxPtrOut[i] + __sync_fetch_and_add(&Added[i], 1);
+            Where = vtxPtrOut[i] + Added[i]++;
+//#ifdef DEBUG_B
+            printf("Where : %ld\n", Where);
+//#endif
+            vtxIndOut[Where].head = i; // Head
+            vtxIndOut[Where].tail = temp->key; // Tail
+            vtxIndOut[Where].weight = temp->data; // Weight
+            if (i != temp->key) {
+                // Don't understand the point of this now
+                //Where = vtxPtrOut[temp->key] + __sync_fetch_and_add(&Added[i], 1);
+                Where = vtxPtrOut[temp->key] + Added[temp->key]++;
+                vtxIndOut[Where].head = temp->key;
+                vtxIndOut[Where].tail = i; // Tail
+                vtxIndOut[Where].weight = temp->data; // Weight
+            }
+            temp = cluPtrIn[i][j+1];
+        } // End of while
+    } // End of for(i)
+    free(temp);
 
-    return(0.0);
-}
+    end = clock();
+    totTime += (double)(end - start)/CLOCKS_PER_SEC;
+    printf("Time to build graph: %3.3lf\n", (double)(end - start)/CLOCKS_PER_SEC);
+    printf("Total time: %3.3lf\n", totTime);
+    printf("Total time to build next phase: %3.3lf\n", totTime);
+
+    // Set the pointers
+    Gout->numVertices = NV_out;
+    Gout->sVertices = NV_out;
+    // Note: Self-loops are represented ONCE, but others appear TWICE
+    Gout->numEdges = realEdges; // Add self-loops to the #edges
+    Gout->edgeListPtrs = vtxPtrOut;
+    Gout->edgeList = vtxIndOut;
+
+    // Clean up
+    free(Added);
+    // Don't understand the point of it right now
+    //#pragma omp parallel for
+    for (long i = 0; i < numUniqueClusters; i++) {
+        freeHashArr(cluPtrIn[i], sizeArr[i]);    
+    }
+    free(cluPtrIn);
+
+    // Don't understand the point of it right now
+    // #pragma omp parallel for
+    /*
+    for (long i = 0; i < numUniqueClusters; i++) {
+        omp_destroy_lock(&nlocks[i]);
+    }
+    free(nlocks);
+    */
+
+    return(totTime);
+} // End of buildNewGraphVF
 
 // function : main
 int main(int argc, char** argv) {
