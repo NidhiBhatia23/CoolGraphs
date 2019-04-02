@@ -893,7 +893,7 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
     /* 
     #pragma omp parallel for
     */
-    for (long i = 1; i <= numUniqueClusters; i++) {
+    for (long i = 1; i <= NV_out; i++) {
         vtxPtrOut[i] = 0;
     }
 
@@ -923,8 +923,10 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
         }
         long adj1 = vtxPtrIn[i];
         long adj2 = vtxPtrIn[i+1];
+#ifdef DEBUG_B
         printf("adj1 : %ld  adj2 : %ld\n", adj1, adj2);
         printf("Community of i : %ld is %ld\n", i, C[i]);
+#endif
         dataItem* temp = (dataItem*)malloc(sizeof(dataItem));
         assert(temp != 0);
         long size = 0;
@@ -935,7 +937,9 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
                 size++;
             }
         }
+#ifdef DEBUG_B
         printf("For i=%ld : size is %ld\n", i, size);
+#endif
         cluPtrIn[C[i]] = (dataItem**)malloc(size * (sizeof(dataItem)));
         for (long k = 0; k < size; k++) {
             cluPtrIn[C[i]][k] = NULL;
@@ -950,14 +954,18 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
                 /*
                 omp_set_lock(&nlocks[C[i]]);  // Locking the cluster
                 */
+#ifdef DEBUG_B
                 printf("tail for i : %ld, j : %ld is %ld\n", i, j, tail);
                 printf("community of tail is C[%ld] : %ld\n", tail, C[tail]);
                 printf("Inside for loop j for i=%ld\n", i);
+#endif
                 temp = search(C[tail], size, cluPtrIn[C[i]]);
                 if (temp != NULL) {
                     temp->data += (long)vtxIndIn[j].weight;
                 } else {
+#ifdef DEBUG_B
                     printf("inside j : %ld and edge weight is vtxIndIn[%ld].weight : %ld\n", j, j, (long)vtxIndIn[j].weight);
+#endif
                     insert(C[tail], (long)vtxIndIn[j].weight, size, cluPtrIn[C[i]]); // Inter-community edge
                     //__sync_fetch_and_add(&vtxPtrOut[C[i]+1], 1);
                     vtxPtrOut[C[i]+1] = vtxPtrOut[C[i]+1] + 1;
@@ -980,17 +988,23 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
                 */
             } // End of if
         } // End of for(j)
+#ifdef DEBUG_B
         displayHashMap(cluPtrIn[C[i]], size);
         printf("NE_self : %ld\n", NE_self);
         printf("NE_out : %ld\n", NE_out);
+#endif
     } // End of for(i)
     // Prefix sum:
     for (long i = 0; i < NV_out; i++) {
+#ifdef DEBUG_B
         printf("Prev : i : %ld vtxPtrOut[%ld] : %ld ", i, i, vtxPtrOut[i]);
         printf("i+1 : %ld vtxPtrOut[%ld] : %ld ", i+1, i+1, vtxPtrOut[i+1]);
+#endif
         vtxPtrOut[i+1] = vtxPtrOut[i+1] + vtxPtrOut[i];    
+#ifdef DEBUG_B
         printf("New i : %ld vtxPtrOut[%ld] : %ld    ", i, i, vtxPtrOut[i]);
         printf("New i+1 : %ld vtxPtrOut[%ld] : %ld\n", i+1, i+1, vtxPtrOut[i+1]);
+#endif
     }
 
     end = clock();
