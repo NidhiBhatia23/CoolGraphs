@@ -8,6 +8,9 @@
 #include <unistd.h> //For getopts()
 #include <getopt.h> //For getopts()
 #include <stdbool.h> //For bool
+#include "RngStream.h"
+
+#define MaxDegree 4096 // Increase if number of colors is larger, decrease if memory is not enough
 
 //#define DEBUG
 //#define DEBUG_VF
@@ -1156,6 +1159,7 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
 // function : generateRandomNumbers
 void generateRandomNumbers(double* RandVec, long size) {
     printf("Inside generateRandomNumbers\n");
+    int nT = 1;
     // Don't understand the point of this right now
     //int nT;
     //#pragma omp parallel
@@ -1166,12 +1170,37 @@ void generateRandomNumbers(double* RandVec, long size) {
 
     // Initialize parallel pseudo-random number generator
     unsigned long seed[6] = {1, 2, 3, 4, 5, 6};
+    RngStream_SetPackageSeed(seed);
+    RngStream RngArray[nT]; //array of RngStream Objects
 
-}
+    long block = size/nT;
+    printf("Each thread will add %ld edges\n", block);
 
+    // Each thread will generate m/nT edges each
+    //double start = omp_get_wtime();
+    clock_t start = clock();
 
+    // Don't understand the point of this right now
+    // #pragma omp parallel
+    // {
+    //  int myRank = omp_get_thread_num();
+    //  #pragma omp for schedule(static)
+    //  for (long i = 0; i < size; i++) {
+    //      RandVec[i] = RndArray[myRank].RandU01();
+    //  }
+    // }
+    
+    for (int i = 0; i < nT; i++) {
+        RngArray[i] = RngStream_CreateStream("");
+    }
 
-
+    int myRank = 0;
+    //printf("myRank=%d\n", myRank);
+    for (long i = 0; i < size; i++) {
+        //printf("i=%ld\n", i);
+        RandVec[i] = RngStream_RandU01(RngArray[myRank]);
+    } 
+} // End of generateRandomNumbers
 
 // function : algoDistanceOneVertexColoringOpt
 int algoDistanceOneVertexColoringOpt(graph* G, int* vtxColor, int nThreads, double* totTime) {
@@ -1198,13 +1227,142 @@ int algoDistanceOneVertexColoringOpt(graph* G, int* vtxColor, int nThreads, doub
     long NVer = G->numVertices;
     long NEdge = G->numEdges;
     long* vtxPtr = G->edgeListPtrs; // vertex pointer: pointers to endV
-    edge* verInd = G->edgeList; // vertex index : destination id of an edge (src -> dest)
+    edge* vtxInd = G->edgeList; // vertex index : destination id of an edge (src -> dest)
     printf("Vertices : %ld  Edges : %ld\n", NVer, NEdge);
 
     // Build a vector of random numbers
     double* randValues = (double*)malloc(NVer * sizeof(double));
     assert(randValues != 0);
     generateRandomNumbers(randValues, NVer);
+    /*
+    for (long i = 0; i < NVer; i++) {
+        printf("i=%ld   %lf ", randValues[i]);
+    }
+    printf("\n");
+    */
+    
+    long* Q = (long*)malloc(NVer * sizeof(long));
+    assert(Q != 0);
+    long* Qtmp = (long*)malloc(NVer * sizeof(long));
+    assert(Qtmp != 0);
+    long* Qswap;
+    if ((Q == NULL) || (Qtmp == NULL)) {
+        printf("Not enough memory to allocate two queues\n");
+        exit(1);
+    }
+
+    long QTail = 0; // Tail of the queue
+    long QtmopTail = 0; // Tail of the queue (implicitly will represent the size)
+
+    // Don't understand the point of this right now
+    // #pragma omp parallel for
+    for (long i = 0; i < NVer; i++) {
+        Q[i] = i; // Natural order
+        Qtmp[i] = -1; // empty queue
+    }
+    QTail = NVer; // Queue all vertices
+    //////////////////////////////////////////////////////////////////////////////
+    ////////////////// START THE WHILE LOOP //////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////
+    long nConflicts = 0; // Number of conflicts
+    int nLoops = 0; // Number of rounds of conflict resolution
+
+    printf("Results from parallel coloring:\n");
+    printf("***********************************\n");
+
+    do {
+        /////////////////////// PART 1 /////////////////////
+        // Color the vertices in parallel - do not worry about conflicts
+        printf("** Iteration : %d\n", nLoops);
+            
+        start = clock();
+        // Don't understand the point of this right now
+        //#pragma omp parallel for
+        for (long Qi = 0; Qi < QTail; Qi++) {
+            long v = Q[Qi]; // Q.pop_front();
+            
+            long adj1 = vtxPtr[v];
+            long adj2 = vtxPtr[v+1];
+            long myDegree = adj2 - adj1;
+            bool* Mark = (bool*)malloc(MaxDegree * sizeof(bool));
+            assert(Mark != 0);
+
+            for (long i = 0; i < MaxDegree; i++) {
+                Mark[i] = false;
+            }
+
+            int maxColor = -1;
+            int adjColor = -1;
+
+            // Browse the adjacency set of vertex v
+            for (long k = adj1; k < adj2; k++) {
+                if (v == vtxInd[k].tail) { // Self-loops
+                    continue;
+                }
+                adjColor = vtxColor[vtxInd[k].tail];
+                if (adjColor >= 0) {
+                    assert(adjColor < MaxDegree);
+                    Mark[adjColor] = true;
+                }
+                // Find the largest color in the neighborhood
+                if (adjColor > maxColor) {
+                    maxColor = adjColor;
+                }
+            } // End of for loop to traverse adjacency of v
+            
+            int myColor;
+            for (myColor = 0; myColor <= maxColor; myColor++) {
+                if (Mark[myColor] == false) {
+                    break;    
+                }
+            }
+
+            if (myColor == maxColor) {
+                myColor++; // no available color with # less then cmax
+            }
+
+            vtxColor[v] = myColor; // Color the vertex
+
+            free(Mark);
+        } // End of outer for loop : for each vertex
+        start = clock() - start;
+        totalTime += (double)(start/CLOCKS_PER_SEC);
+        printf("Time taken for coloring: %lf sec.\n", (double)(start/CLOCKS_PER_SEC));
+
+        //////////////////////// PART 2 /////////////////////////
+        // Detect conflicts
+        printf("Phase 2 : Detect conflicts, add to Queue\n");
+        // Add the conflicting vertices into a Q:
+        // Conflicts are resolved by changing the color of only one of 
+        // the two conflicting vertices, based on their random values
+        end = clock();
+        // Don't understand the point of this
+        // #pragma omp parallel for
+        for (long Qi = 0; Qi < QTail; Qi++) {
+            long v = Q[Qi]; // Q.pop_front();
+            long adj1 = vtxPtr[v];
+            long adj2 = vtxPtr[v+1];
+            // Browse the adjacency set of vertex v
+            for (long k = adj1; k < adj2; k++) {
+                if (v == vtxInd[k].tail) { // Self-loops
+                    continue;
+                }
+                if (vtxColor[v] == vtxColor[vtxInd[k].tail]) {
+                    if ( (randValues[v] < randValues[vtxInd[k].tail]) || 
+                            ( (randValues[v] == randValues[vtxInd[k].tail]) && (v < vtxInd[k].tail) ) ) {
+
+                    
+                    } 
+                }
+            }
+
+        }
+
+
+
+
+
+    }
 
 
 
@@ -1260,10 +1418,10 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    int nT = 1; // default number of threads is 1
     // Check for number of threads
     // Dont understand the point of it now
     /*
-       int nT = 1; // default number of threads is 1
 #pragma omp parallel 
 {
 nT = omp_get_num_threads();
@@ -1343,7 +1501,7 @@ long* C_orig = (long*)malloc(NV * sizeof(long));
 for (int i = 0; i < NV; i++) {
     C_orig[i] = -1;
 }
-
+runMultiPhaseLouvainAlgorithm(G, C_orig, coloring, inputParams->minGraphSize, inputParams->threshold, inputParams->C_thresh, nT);
 // Free the memory space allocated for struct clusteringParams
 free(inputParams);
 // Free the memory space allocated for struct graph
