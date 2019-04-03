@@ -1153,8 +1153,62 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
     return(totTime);
 } // End of buildNewGraphVF
 
+// function : generateRandomNumbers
+void generateRandomNumbers(double* RandVec, long size) {
+    printf("Inside generateRandomNumbers\n");
+    // Don't understand the point of this right now
+    //int nT;
+    //#pragma omp parallel
+    //{
+    //  nT = omp_get_num_threads();
+    //}
+    //printf("Number of threads: %d\n", nT);
+
+    // Initialize parallel pseudo-random number generator
+    unsigned long seed[6] = {1, 2, 3, 4, 5, 6};
+
+}
+
+
+
+
+
 // function : algoDistanceOneVertexColoringOpt
 int algoDistanceOneVertexColoringOpt(graph* G, int* vtxColor, int nThreads, double* totTime) {
+    printf("Inside algoDistanceOneVertexColoringOpt\n");
+    // Don't understand the point of this right now
+    /*
+    if (nThreads < 1) {
+        omp_set_num_threads(1); // default to one thread
+    } else {
+        omp_set_num_threads(nThreads);
+    }
+
+    int nT;
+    #pragma omp parallel
+    {
+        nT = omp_get_num_threads();
+    }
+    printf("Actual number of threads: %d (requested: %d)\n", nT, nThreads);
+    */
+
+    clock_t start, end;
+    double totalTime=0;
+    // Get the iterators for the graph:
+    long NVer = G->numVertices;
+    long NEdge = G->numEdges;
+    long* vtxPtr = G->edgeListPtrs; // vertex pointer: pointers to endV
+    edge* verInd = G->edgeList; // vertex index : destination id of an edge (src -> dest)
+    printf("Vertices : %ld  Edges : %ld\n", NVer, NEdge);
+
+    // Build a vector of random numbers
+    double* randValues = (double*)malloc(NVer * sizeof(double));
+    assert(randValues != 0);
+    generateRandomNumbers(randValues, NVer);
+
+
+
+
     return 0;
 }
 
