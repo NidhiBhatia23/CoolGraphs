@@ -1153,6 +1153,41 @@ double buildNewGraphVF(graph* Gin, graph* Gout, long* C, long numUniqueClusters)
     return(totTime);
 } // End of buildNewGraphVF
 
+// function : algoDistanceOneVertexColoringOpt
+int algoDistanceOneVertexColoringOpt(graph* G, int* vtxColor, int nThreads, double* totTime) {
+    return 0;
+}
+
+// function : runMultiPhaseLouvainAlgorithm
+// WARNING : This will overwrite the original graph data structure to
+// minimize memory footprint
+// Return : C_orig will hold the cluster ids for vertices in the 
+// original graph. Assume C_orig is initialized appropriately
+// WARNING : Graph G will be destroyed at the end of this routine.
+void runMultiPhaseLouvainAlgorithm(graph* G, long* C_orig, int coloring, long minGraphSize, 
+        double threshold, double C_threshold, int numThreads) {
+    double totTimeClustering=0, totTimeBuildingPhase=0, totTimeColoring=0, tmpTime;
+    int tmpItr=0, totItr=0;
+    long NV = G->numVertices;
+
+    // long minGraphSize = 100000; // Need atleast 100,000 vertices to turn coloring on
+
+    int* colors;
+    int numColors;
+    if (coloring == 1) {
+        colors = (int*)malloc(G->numVertices * sizeof(int));
+        assert(colors != 0);
+        // Don't know what to do with this right now
+        //#pragma omp parallel for
+        for (long i = 0; i < G->numVertices; i++) {
+            colors[i] = -1;
+        }
+        numColors = algoDistanceOneVertexColoringOpt(G, colors, numThreads, &tmpTime) + 1;
+        totTimeColoring += tmpTime;
+        printf("Number of colors used : %d\n", numColors);
+    }
+}
+
 // function : main
 int main(int argc, char** argv) {
     // Step1 : Parse Input Parameters
