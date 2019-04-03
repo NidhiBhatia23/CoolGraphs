@@ -1242,9 +1242,23 @@ if (inputParams->VF) {
     displayGraphCharacteristics(G);
 } // End of if (VF == 1)
 
+// Datastructures to store clustering information
+long NV = G->numVertices;
+long* C_orig = (long*)malloc(NV * sizeof(long));
+
+// Call the clustering algorithm
+// They call strong scaling - I don't know what to do
+// with it right now
+// No strong scaling
+//#pragma omp parallel for
+for (int i = 0; i < NV; i++) {
+    C_orig[i] = -1;
+}
+
 // Free the memory space allocated for struct clusteringParams
 free(inputParams);
 // Free the memory space allocated for struct graph
 free(G);
+
 return 0;
 }
