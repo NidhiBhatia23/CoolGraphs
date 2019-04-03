@@ -1252,7 +1252,7 @@ int algoDistanceOneVertexColoringOpt(graph* G, int* vtxColor, int nThreads, doub
     }
 
     long QTail = 0; // Tail of the queue
-    long QtmopTail = 0; // Tail of the queue (implicitly will represent the size)
+    long QtmpTail = 0; // Tail of the queue (implicitly will represent the size)
 
     // Don't understand the point of this right now
     // #pragma omp parallel for
@@ -1350,24 +1350,79 @@ int algoDistanceOneVertexColoringOpt(graph* G, int* vtxColor, int nThreads, doub
                 if (vtxColor[v] == vtxColor[vtxInd[k].tail]) {
                     if ( (randValues[v] < randValues[vtxInd[k].tail]) || 
                             ( (randValues[v] == randValues[vtxInd[k].tail]) && (v < vtxInd[k].tail) ) ) {
-
-                    
+                        //long whereInQ = __sync_fetch_and_add(&QtmpTail, 1);
+                        long whereInQ = QtmpTail;
+                        QtmpTail++;
+                        Qtmp[whereInQ] = v; // Add to the Queue
+                        vtxColor[v] = -1; // Will prevent v from being in conflict in another pairing
+                        break;
                     } 
-                }
-            }
+                } // End of if (vtxColor[v] == vtxColor[vtxInd[k].tail])
+            } // End of inner for loop: w in adj(v)
+        } // //End of outer for loop: for each vertex
+        
+        end = clock() - end;
+        totalTime += (double)(end/CLOCKS_PER_SEC);
+        nConflicts += QtmpTail;
+        nLoops++;
+        printf("Num conflicts : %ld\n", QtmpTail);
+        printf("Time for detection : %lf sec\n", (double)(end/CLOCKS_PER_SEC));
 
+        // Swap the two queues:
+        Qswap = Q;
+        Q = Qtmp; // Q now points to the second vector
+        Qtmp = Qswap; 
+        QTail = QtmpTail; // Number of elements
+        QtmpTail = 0; // Symbolic emptying of the second queue
+    } while (QTail > 0);
+
+    // Check the number of colors used
+    int nColors = -1;
+    for (long v = 0; v < NVer; v++) {
+        if (vtxColor[v] > nColors) {
+            nColors = vtxColor[v];
         }
-
-
-
-
-
     }
+    printf("***************************************\n");
+    printf("Total number of colors used: %d\n", nColors);
+    printf("Number of conflicts overall: %ld\n", nConflicts);
+    printf("Number of rounds: %d\n", nLoops);
+    printf("Total time: %lf sec\n", totalTime);
+    printf("***************************************\n");
+    *totTime = totalTime;
+    //////////////////////////////////////////////////////////////////
+    ////////////// VERIFY THE COLORS /////////////////////////////////
+    //////////////////////////////////////////////////////////////////
+    // Verify results and cleanup
+    int myConflicts = 0;
+    // Don't understand the point of this right now
+    // #pragma omp parallel for
+    for (long v = 0; v < NVer; v++) {
+        long adj1 = vtxPtr[v];
+        long adj2 = vtxPtr[v+1];
+        // Browse the adjacency set of vertex v
+        for (long k = adj1; k < adj2; k++) {
+            if (v == vtxInd[k].tail) {
+                continue; // Self-loops
+            }
+            if (vtxColor[v] == vtxColor[vtxInd[k].tail]) {
+                //__sync_fetch_and_add(&myConflicts, 1); //increment the counter
+                myConflicts++;
+            }
+        } //End of inner for loop: w in adj(v)
+    } //End of outer for loop: for each vertex
+    myConflicts = myConflicts / 2; // Have counted each conflict twice
+    if (myConflicts > 0) {
+        printf("Check - WARNING: Number of conflicts detected after resolution: %d \n\n", myConflicts);
+    } else {
+        printf("Check - SUCCESS: No conflicts exist\n\n");
+    }
+    // Clean-up
+    free(Q);
+    free(Qtmp);
+    free(randValues);
 
-
-
-
-    return 0;
+    return nColors; // Return the number of colors used
 }
 
 // function : runMultiPhaseLouvainAlgorithm
