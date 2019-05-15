@@ -669,7 +669,8 @@ long countTokens(char* line, char* delimiter) {
         long *vtxPtr = G->edgeListPtrs;
         edge *vtxInd = G->edgeList;
         long numNode = 0;
-        clock_t start = clock();
+        //clock_t start = clock();
+        double start = omp_get_wtime();
 
         // Initialize the communities
         // Don't understand the point of it now
@@ -699,9 +700,10 @@ long countTokens(char* line, char* delimiter) {
                 } // else, chill!
             } 
         } // End of for
-        start = clock() - start;
+        start = omp_get_wtime() - start;
 #ifdef DEBUG_VF
-        printf("Time to determine number of vertices (numNode) to fix: %lf\n", (double)start/CLOCKS_PER_SEC);
+        //printf("Time to determine number of vertices (numNode) to fix: %lf\n", (double)start/CLOCKS_PER_SEC);
+        printf("Time to determine number of vertices (numNode) to fix: %lf\n", start);
 #endif
         return numNode;
     }
@@ -813,7 +815,8 @@ long countTokens(char* line, char* delimiter) {
     // Returns the number of unique clusters
     long renumberClustersContiguously(long* C, long size) {
         printf("Inside renumberClustersContiguously\n");
-        clock_t start = clock();
+        //clock_t start = clock();
+        double start = omp_get_wtime();
         // count the number of communities and internal edges
         // map each neighbor's cluster to a local number
         dataItem** hashArr = (dataItem**)malloc(size * sizeof(dataItem*));
@@ -842,8 +845,8 @@ long countTokens(char* line, char* delimiter) {
         //displayHashMap(hashArr, size);
         freeHashArr(hashArr, size);
         //free(temp);
-        start = clock() - start;
-        printf("Time to renumber clusters: %lf\n", (double)start/CLOCKS_PER_SEC);
+        start = omp_get_wtime() - start;
+        printf("Time to renumber clusters: %lf\n", start);
         return numUniqueClusters; // Return the number of unique cluster ids
     }
 
@@ -864,7 +867,8 @@ nT = omp_get_num_threads();
     /*
        printf("Actual number of threads: %d \n", nT);
        */
-    clock_t start, end; 
+    //clock_t start, end; 
+    double start, end; 
     double totTime = 0; // For timing purposes
     double total = 0, totItr = 0;
 
@@ -874,7 +878,7 @@ nT = omp_get_num_threads();
     long* vtxPtrIn = Gin->edgeListPtrs;
     edge* vtxIndIn = Gin->edgeList;
 
-    start = clock();
+    start = omp_get_wtime();
 
     // Pointers into the output graph structure
     long NV_out = numUniqueClusters;
@@ -923,11 +927,11 @@ omp_init_lock(&nlocks[i]); //Initialize locks
 }
 */
 
-end = clock();
-totTime += (double)(end - start)/CLOCKS_PER_SEC;
-printf("Time to initialize: %3.3lf\n", (double)(end - start)/CLOCKS_PER_SEC);
+end = omp_get_wtime();
+totTime += (end - start);
+printf("Time to initialize: %3.3lf\n", (end - start));
 
-start = clock();
+start = omp_get_wtime();
 // Care about it later
 /* 
 #pragma omp parallel for
@@ -1067,14 +1071,14 @@ for (long i = 0; i < NV_out; i++) {
 #endif
 }
 
-end = clock();
+end = omp_get_wtime();
 totTime += (double)(end - start)/CLOCKS_PER_SEC;
 printf("NE_out=%ld  NE_self=%ld\n", NE_out, NE_self);
 printf("These should match: %ld == %ld\n", (2*NE_out+NE_self), vtxPtrOut[NV_out]);
-printf("Time to count edges: %3.3lf\n", (double)(end - start)/CLOCKS_PER_SEC);
+printf("Time to count edges: %3.3lf\n", (end - start));
 assert(vtxPtrOut[NV_out] == (NE_out*2+NE_self)); // Sanity check
 
-start = clock();
+start = omp_get_wtime();
 // Step 3 : build the edge list:
 long numEdges = vtxPtrOut[NV_out];
 long realEdges = NE_out + NE_self; // Self-loops appear once and others appear twice. How?
@@ -1138,9 +1142,9 @@ for (long i = 0; i < NV_out; i++) {
 } // End of for(i)
 free(temp);
 
-end = clock();
-totTime += (double)(end - start)/CLOCKS_PER_SEC;
-printf("Time to build graph: %3.3lf\n", (double)(end - start)/CLOCKS_PER_SEC);
+end = omp_get_wtime();
+totTime += (end - start);
+printf("Time to build graph: %3.3lf\n", (end - start));
 printf("Total time: %3.3lf\n", totTime);
 printf("Total time to build next phase: %3.3lf\n", totTime);
 
@@ -1195,7 +1199,7 @@ void generateRandomNumbers(double* RandVec, long size) {
 
     // Each thread will generate m/nT edges each
     //double start = omp_get_wtime();
-    clock_t start = clock();
+    //clock_t start = clock();
 
     // Don't understand the point of this right now
     // #pragma omp parallel
@@ -1238,7 +1242,7 @@ nT = omp_get_num_threads();
 printf("Actual number of threads: %d (requested: %d)\n", nT, nThreads);
 */
 
-    clock_t start, end;
+    double start, end;
     double totalTime=0;
     // Get the iterators for the graph:
     long NVer = G->numVertices;
@@ -1292,7 +1296,7 @@ do {
     // Color the vertices in parallel - do not worry about conflicts
     printf("** Iteration : %d\n", nLoops);
 
-    start = clock();
+    start = omp_get_wtime();
     // Don't understand the point of this right now
     //#pragma omp parallel for
     for (long Qi = 0; Qi < QTail; Qi++) {
@@ -1342,9 +1346,9 @@ do {
 
         free(Mark);
     } // End of outer for loop : for each vertex
-    start = clock() - start;
-    totalTime += (double)(start/CLOCKS_PER_SEC);
-    printf("Time taken for coloring: %lf sec.\n", (double)(start/CLOCKS_PER_SEC));
+    start = omp_get_wtime() - start;
+    totalTime += (start);
+    printf("Time taken for coloring: %lf sec.\n", start);
     /*
     for (int u = 0; u < NVer; u++) {
         printf(" vtxColor[%ld] :: %ld,", u, vtxColor[u]);
@@ -1358,7 +1362,7 @@ do {
     // Add the conflicting vertices into a Q:
     // Conflicts are resolved by changing the color of only one of 
     // the two conflicting vertices, based on their random values
-    end = clock();
+    end = omp_get_wtime();
     // Don't understand the point of this
     // #pragma omp parallel for
     for (long Qi = 0; Qi < QTail; Qi++) {
@@ -1384,12 +1388,12 @@ do {
         } // End of inner for loop: w in adj(v)
     } // //End of outer for loop: for each vertex
 
-    end = clock() - end;
-    totalTime += (double)(end/CLOCKS_PER_SEC);
+    end = omp_get_wtime() - end;
+    totalTime += (end);
     nConflicts += QtmpTail;
     nLoops++;
     printf("Num conflicts : %ld\n", QtmpTail);
-    printf("Time for detection : %lf sec\n", (double)(end/CLOCKS_PER_SEC));
+    printf("Time for detection : %lf sec\n", (end));
 
     // Swap the two queues:
     Qswap = Q;
@@ -1590,7 +1594,7 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
     int numItrs = 0;
 
     /********************** Initialization **************************/
-    time1 = clock();
+    time1 = omp_get_wtime();
     //Store the degree of all vertices
     long* vDegree = (long *) malloc (NV * sizeof(long)); 
     assert(vDegree != 0);
@@ -1620,8 +1624,8 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
     //Initialize each vertex to its own cluster
     initCommAss(pastCommAss, currCommAss, NV);
 
-    time2 = clock();
-    printf("Time to initialize: %3.3lf\n", (double)time2-time1/CLOCKS_PER_SEC);
+    time2 = omp_get_wtime();
+    printf("Time to initialize: %3.3lf\n", time2-time1);
 
     printf("========================================================================================================\n");
     printf("Itr      E_xx            A_x2           Curr-Mod         Time-1(s)       Time-2(s)        T/Itr(s)\n");
@@ -1637,7 +1641,7 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
     //Start maximizing modularity
     while(true) {
         numItrs++;
-        time1 = clock();
+        time1 = omp_get_wtime();
         /* Re-initialize datastructures */
         //#pragma omp parallel for
         for (long i=0; i<NV; i++) {
@@ -1703,9 +1707,9 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
                 free(Counter);
         }
 
-        time2 = clock();
+        time2 = omp_get_wtime();
 
-        time3 = clock();
+        time3 = omp_get_wtime();
 
         double e_xx = 0;
         double a2_x = 0;
@@ -1714,14 +1718,13 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
             e_xx += (double)clusterWeightInternal[i];
             a2_x += (cInfo[i].degree)*(cInfo[i].degree);
         }
-        time4 = clock();
+        time4 = omp_get_wtime();
 
         currMod = (e_xx*(double)constantForSecondTerm) - (a2_x*(double)constantForSecondTerm*(double)constantForSecondTerm);
         totItr = (time2-time1) + (time4-time3);
-        totItr = (double)totItr/CLOCKS_PER_SEC;
 
         total += totItr;
-        printf("%d \t %g \t %g \t %lf \t %3.3lf \t %3.3lf  \t %3.3lf\n",numItrs, e_xx, a2_x, currMod, (double)(time2-time1)/CLOCKS_PER_SEC, (double)(time4-time3)/CLOCKS_PER_SEC, totItr );
+        printf("%d \t %g \t %g \t %lf \t %3.3lf \t %3.3lf  \t %3.3lf\n",numItrs, e_xx, a2_x, currMod, (time2-time1), (time4-time3), totItr );
         printf("%d \t %lf \t %3.3lf  \t %3.3lf\n",numItrs, currMod, totItr, total);
 
         //Break if modularity gain is not sufficient
@@ -1829,7 +1832,7 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
     int numItrs = 0;
 
     /********************** Initialization **************************/
-    time1 = clock();
+    time1 = omp_get_wtime();
     vDegree = (long *) malloc (NV * sizeof(long)); 
     assert(vDegree != 0);
     cInfo = (comm *) malloc (NV * sizeof(comm)); 
@@ -1885,8 +1888,8 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
         //long Where = colorPtr[tc] + __sync_fetch_and_add(&(colorAdded[tc]), 1);
         colorIndex[Where] = i;
     }
-    time2 = clock();
-    printf("Time to initialize: %3.3lf\n", (double)(time2-time1)/CLOCKS_PER_SEC);
+    time2 = omp_get_wtime();
+    printf("Time to initialize: %3.3lf\n", (time2-time1));
 
     printf("========================================================================================================\n");
     printf("Itr      E_xx            A_x2           Curr-Mod         Time-1(s)       Time-2(s)        T/Itr(s)\n");
@@ -1898,7 +1901,7 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
 
     while(true) {
         numItrs++;
-        time1 = clock();
+        time1 = omp_get_wtime();
         for( long ci = 0; ci < numColor; ci++) {// Begin of color loop
             //#pragma omp parallel for
             for (long i=0; i<NV; i++) {
@@ -1975,9 +1978,9 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
                 cInfo[i].degree += cUpdate[i].degree;
             }
         } // End of Color loop
-        time2 = clock();
+        time2 = omp_get_wtime();
 
-        time3 = clock();
+        time3 = omp_get_wtime();
         double e_xx = 0;
         double a2_x = 0;
         // CALCULATE MOD
@@ -2000,7 +2003,7 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
             e_xx += clusterWeightInternal[i];
             a2_x += (cInfo[i].degree)*(cInfo[i].degree);
         }
-        time4 = clock();
+        time4 = omp_get_wtime();
         currMod = e_xx*(double)constantForSecondTerm  - a2_x*(double)constantForSecondTerm*(double)constantForSecondTerm;
 
         totItr = (time2-time1) + (time4-time3);
@@ -2056,7 +2059,7 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
     //}
 
     //printf("Actual number of threads: %d (requested: %d)\n", nT, nThreads);
-    clock_t time1, time2;
+    double time1, time2;
     double TotTime=0; //For timing purposes
     double total = 0, totItr = 0;
     //Pointers into the input graph structure:
@@ -2065,7 +2068,7 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
     long    *vtxPtrIn    = Gin->edgeListPtrs;
     edge    *vtxIndIn    = Gin->edgeList;
 
-    time1 = clock();
+    time1 = omp_get_wtime();
     // Pointers into the output graph structure
     long NV_out = numUniqueClusters;
     long NE_out = 0;
@@ -2115,12 +2118,12 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
         omp_init_lock(&nlocks[i]); //Initialize locks
     }
     */
-    time2 = clock();
-    TotTime += (double)(time2-time1)/CLOCKS_PER_SEC;
+    time2 = omp_get_wtime();
+    TotTime += (time2-time1);
 
-    printf("Time to initialize: %3.3lf\n", (double)(time2-time1)/CLOCKS_PER_SEC);
+    printf("Time to initialize: %3.3lf\n", (time2-time1));
 
-    time1 = clock();
+    time1 = omp_get_wtime();
 
     /*
     //#pragma omp parallel for
@@ -2213,15 +2216,15 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
         vtxPtrOut[i+1] += vtxPtrOut[i];
     }
 
-    time2 = clock();
-    TotTime += (double)(time2 - time1)/CLOCKS_PER_SEC;
+    time2 = omp_get_wtime();
+    TotTime += (time2 - time1);
     printf("NE_out : %ld\n", NE_out);
     printf("NV_out : %ld\n", NV_out);
     printf("These should match: %ld == %ld\n",(2*NE_out + NV_out), vtxPtrOut[NV_out]);
-    printf("Time to count edges: %3.3lf\n", (double)(time2 - time1)/CLOCKS_PER_SEC);
+    printf("Time to count edges: %3.3lf\n", (time2 - time1));
     assert(vtxPtrOut[NV_out] == (NE_out*2+NV_out)); //Sanity check
 
-    time1 = clock();
+    time1 = omp_get_wtime();
     // Step 3 : build the edge list:
     long numEdges   = vtxPtrOut[NV_out];
     long realEdges  = numEdges - NE_out; //Self-loops appear once, others appear twice
@@ -2291,8 +2294,8 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
     } // End of for(i)
     //free(temp);
 
-    time2 = clock();
-    TotTime += (double)(time2-time1)/CLOCKS_PER_SEC;
+    time2 = omp_get_wtime();
+    TotTime += (time2-time1);
     printf("Time to build graph: %3.3lf\n", (double)(time2 - time1)/CLOCKS_PER_SEC);
     printf("Total time: %3.3lf\n", TotTime);
     printf("Total time to build next phase: %3.3lf\n", TotTime);
@@ -2543,12 +2546,12 @@ if (inputParams->coloring) {
     coloring = 1;
 }
 
-clock_t start, end;
+double start, end;
 double cpu_time_used;
 // Vertex Following option
 if (inputParams->VF) {
     printf("Vertex following is enabled.\n");
-    start = clock();
+    start = omp_get_wtime();
     long numVtxToFix = 0; // Default 0
     long* C = (long*)malloc(G->numVertices*sizeof(long));
     assert(C != 0);
