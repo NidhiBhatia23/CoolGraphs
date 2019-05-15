@@ -56,7 +56,7 @@ typedef struct clusteringParams {
 
 // function : setDefaultParams
 void setDefaultParams(clusteringParams* inputParams) {
-    printf("Inside setDefaultParams\n");
+    //printf("Inside setDefaultParams\n");
     inputParams->fType = 5;
     //inputParams->strongScaling = false;
     inputParams->output = false;
@@ -70,7 +70,7 @@ void setDefaultParams(clusteringParams* inputParams) {
 
 // function : printUsage
 void printUsage() {
-    printf("Inside printUsage\n");
+    //printf("Inside printUsage\n");
     printf("***************************************************************************************\n");
     printf("Basic usage: Driver <Options> FileName\n");
     printf("***************************************************************************************\n");
@@ -701,10 +701,8 @@ long countTokens(char* line, char* delimiter) {
             } 
         } // End of for
         start = omp_get_wtime() - start;
-#ifdef DEBUG_VF
         //printf("Time to determine number of vertices (numNode) to fix: %lf\n", (double)start/CLOCKS_PER_SEC);
-        printf("Time to determine number of vertices (numNode) to fix: %lf\n", start);
-#endif
+        printf("Time to determine number of vertices (numNode) to fix: %3.3lf\n", start);
         return numNode;
     }
 
@@ -846,7 +844,7 @@ long countTokens(char* line, char* delimiter) {
         freeHashArr(hashArr, size);
         //free(temp);
         start = omp_get_wtime() - start;
-        printf("Time to renumber clusters: %lf\n", start);
+        printf("Time to renumber clusters: %3.3lf\n", start);
         return numUniqueClusters; // Return the number of unique cluster ids
     }
 
@@ -1072,7 +1070,7 @@ for (long i = 0; i < NV_out; i++) {
 }
 
 end = omp_get_wtime();
-totTime += (double)(end - start)/CLOCKS_PER_SEC;
+totTime += (end - start);
 printf("NE_out=%ld  NE_self=%ld\n", NE_out, NE_self);
 printf("These should match: %ld == %ld\n", (2*NE_out+NE_self), vtxPtrOut[NV_out]);
 printf("Time to count edges: %3.3lf\n", (end - start));
@@ -1146,7 +1144,7 @@ end = omp_get_wtime();
 totTime += (end - start);
 printf("Time to build graph: %3.3lf\n", (end - start));
 printf("Total time: %3.3lf\n", totTime);
-printf("Total time to build next phase: %3.3lf\n", totTime);
+//printf("Total time to build next phase: %3.3lf\n", totTime);
 
 // Set the pointers
 Gout->numVertices = NV_out;
@@ -1725,7 +1723,7 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
 
         total += totItr;
         printf("%d \t %g \t %g \t %lf \t %3.3lf \t %3.3lf  \t %3.3lf\n",numItrs, e_xx, a2_x, currMod, (time2-time1), (time4-time3), totItr );
-        printf("%d \t %lf \t %3.3lf  \t %3.3lf\n",numItrs, currMod, totItr, total);
+        //printf("%d \t %lf \t %3.3lf  \t %3.3lf\n",numItrs, currMod, totItr, total);
 
         //Break if modularity gain is not sufficient
         if((currMod - prevMod) < thresMod) {
@@ -1760,9 +1758,6 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
     printf("Total time for %d iterations is: %lf\n",numItrs, total);
     printf("========================================================================================================\n");
 
-    printf("========================================================================================================\n");
-    printf("Total time for %d iterations is: %lf\n",numItrs, total);
-    printf("========================================================================================================\n");
 
     //Store back the community assignments in the input variable:
     //Note: No matter when the while loop exits, we are interested in the previous assignment
@@ -1792,16 +1787,14 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
     } else {
         omp_set_num_threads(nThreads);
     }
+    */
 
     int nT;
-    */
     //#pragma omp parallel
-    /*
-    {
+    //{
         nT = omp_get_num_threads();
-    }
-    */
-    //printf("Actual number of threads: %d (requested: %d)\n", nT, nThreads);
+    //}
+    printf("Actual number of threads: %d (requested: %d)\n", nT, nThreads);
 
     double time1, time2, time3, time4; //For timing purposes
     double total = 0, totItr = 0;
@@ -1895,9 +1888,11 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
     printf("Itr      E_xx            A_x2           Curr-Mod         Time-1(s)       Time-2(s)        T/Itr(s)\n");
     printf("========================================================================================================\n");
 
+    /*
     printf("=====================================================\n");
     printf("Itr      Curr-Mod         T/Itr(s)      T-Cumulative\n");
     printf("=====================================================\n");
+    */
 
     while(true) {
         numItrs++;
@@ -1922,7 +1917,8 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
                 long selfLoop = 0;
                 //Build a datastructure to hold the cluster structure of its neighbors:
                 // map each neighbor's cluster to a local number
-                long size = adj2 - adj1;
+                //long size = adj2 - adj1;
+                long size = NV;
                 //printf("size is %ld\n", size);
                 //map<long, long> clusterLocalMap; //Map each neighbor's cluster to a local number
                 dataItem** clusterLocalMap;
@@ -1944,8 +1940,8 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
                     //Add v's current cluster:
                     //printf("Inside here\n");
                     //printf("currCommAss[i] : %ld\n", currCommAss[i]);
-                    insert(currCommAss[i], 0, size, clusterLocalMap);
-                    temp = search(currCommAss[i], size, clusterLocalMap);
+                    insert(currCommAss[i], (long)0, size, clusterLocalMap);
+                    //temp = search(currCommAss[i], size, clusterLocalMap);
                     //printf("temp->data : %ld\n", temp->data);
                     Counter[0] = 0; //Initialize the counter to ZERO (no edges incident yet)
                     //Find unique cluster ids and #of edges incident (eicj) to them
@@ -1962,9 +1958,9 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
                     //__sync_fetch_and_add(&cUpdate[localTarget].size, 1);
                     cUpdate[localTarget].size += 1;
                     //__sync_fetch_and_sub(&cUpdate[currCommAss[i]].degree, vDegree[i]);
-                    cUpdate[currCommAss[i]].degree += vDegree[i];
+                    cUpdate[currCommAss[i]].degree = cUpdate[currCommAss[i]].degree - vDegree[i];
                     //__sync_fetch_and_sub(&cUpdate[currCommAss[i]].size, 1);
-                    cUpdate[currCommAss[i]].size += 1;
+                    cUpdate[currCommAss[i]].size = cUpdate[currCommAss[i]].size - 1;
                 } // End of if
                 currCommAss[i] = localTarget;
                 freeHashArr(clusterLocalMap, size);
@@ -2490,7 +2486,7 @@ void runMultiPhaseLouvainAlgorithm(graph* G, long* C_orig, int coloring, long mi
 int main(int argc, char** argv) {
     // Step1 : Parse Input Parameters
     //utilityParseInputParameters.hpp
-    printf("Inside main\n");
+    //printf("Inside main\n");
     // Remember to free this!!
     clusteringParams* inputParams = (clusteringParams*)malloc(sizeof(clusteringParams)); 
     setDefaultParams(inputParams);
