@@ -24,7 +24,8 @@ static int round_up(int size, int n)
 //$argv3 - variable storing modularity.
 //Function return - function returns the updated value of 'modularity'
 void kernel(float *x, float *y, float* z) {
-	__m256 tmp = _mm256_set_ps(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0);
+
+	__m256 tmp = _mm256_set_ps(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0);
 	
 	__m256 y0 = _mm256_load_ps(y+0); 
 	__m256 y1 = _mm256_load_ps(y+8); 
@@ -83,12 +84,12 @@ void kernel(float *x, float *y, float* z) {
     y0 = _mm256_add_ps(y0, y8);
     y0 = _mm256_add_ps(y0, y1);
 
-    y2 = _mm256_permute2f128_ps(y0, y0, 1);
-    y0 = _mm256_add_ps(y0, y2);
+    y3 = _mm256_permute2f128_ps(y0, y0, 1);
+    y0 = _mm256_add_ps(y0, y3);
 
-    y0 = _mm256_hadd_ps (y0, y0);
+    y0 = _mm256_hadd_ps(y0, y0);
 
-    y0 = _mm256_hadd_ps (y0, y0);
+    y0 = _mm256_hadd_ps(y0, y0);
 
     _mm256_store_ps(z, y0);
 	return;

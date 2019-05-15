@@ -757,9 +757,7 @@ long countTokens(char* line, char* delimiter) {
     // function : insert
     void insert(long key, long data, long size, dataItem** hashArr) {
         dataItem* item = (dataItem*)malloc(sizeof(dataItem));
-#ifdef DEBUG_INSERT
         printf("key : %ld   data : %ld\n", key, data);
-#endif
         assert(item != 0);
         item->key = key;
         item->data = data;
@@ -776,9 +774,7 @@ long countTokens(char* line, char* delimiter) {
             hashIndex = hashIndex % size;
         }
         hashArr[hashIndex] = item;
-#ifdef DEBUG_INSERT
         printf("Inside insert : key : %ld   data : %ld\n", hashArr[hashIndex]->key, hashArr[hashIndex]->data);
-#endif
     }
 
     // function : delete
@@ -2047,11 +2043,14 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
     }
     */
     for (long i=0; i<numUniqueClusters; i++) {
-        cluPtrIn[i] = (dataItem**)malloc(numUniqueClusters * (sizeof(dataItem)));
+        cluPtrIn[i] = (dataItem**)malloc(numUniqueClusters * (sizeof(dataItem*)));
         for (long k = 0; k < numUniqueClusters; k++) {
             cluPtrIn[i][k] = NULL;
         }
-        insert(i, 0, numUniqueClusters, cluPtrIn[i]); // Add for a self loop with zero weight 
+        insert(i, (long)0, numUniqueClusters, cluPtrIn[i]); // Add for a self loop with zero weight 
+        displayHashMap(cluPtrIn[i], numUniqueClusters);
+        printf("key : %ld\n", cluPtrIn[i][i]->key);
+        printf("value : %ld\n", cluPtrIn[i][i]->data);
     }
     printf("I am here\n");
 
@@ -2105,6 +2104,10 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
     }
     */
 
+    for (long i = 0; i < numUniqueClusters; i++) {
+        displayHashMap(cluPtrIn[C[i]], numUniqueClusters);
+    }
+
     for (long i = 0; i < NV_in; i++) {
         long adj1 = vtxPtrIn[i];
         long adj2 = vtxPtrIn[i+1];
@@ -2122,11 +2125,23 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
                 omp_set_lock(&nlocks[C[i]]);  // Locking the cluster
             */
                 temp = search(C[tail], numUniqueClusters, cluPtrIn[C[i]]);
+                printf("illa\n");
+                displayHashMap(cluPtrIn[3], numUniqueClusters);
                 
                 if (temp != NULL) {
+                    printf("C[tail] is %ld and i is %ld and C[i] is %ld\n", C[tail], i, C[i]);
+                    displayHashMap(cluPtrIn[C[i]], numUniqueClusters);
+                    printf("adding %ld\n", (long)vtxIndIn[j].weight);
                     temp->data += (long)vtxIndIn[j].weight;
+                    printf("new temp->data %ld\n", temp->data);
+                    displayHashMap(cluPtrIn[C[i]], numUniqueClusters);
                 } else {
+                    printf("I am inserting : %ld\n", (long)vtxIndIn[j].weight);
+                    printf("C[i] is %ld\n", C[i]);
+                    displayHashMap(cluPtrIn[C[i]], numUniqueClusters);
                     insert(C[tail], (long)vtxIndIn[j].weight, numUniqueClusters, cluPtrIn[C[i]]); // Inter-community edge
+                    printf("C[i] is %ld\n", C[i]);
+                    displayHashMap(cluPtrIn[C[i]], numUniqueClusters);
                     //__sync_fetch_and_add(&vtxPtrOut[C[i]+1], 1);
                     vtxPtrOut[C[i]+1] = vtxPtrOut[C[i]+1] + 1;
                     if(C[i] > C[tail]) {
@@ -2138,12 +2153,14 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
                         vtxPtrOut[C[tail]+1] = vtxPtrOut[C[tail]+1] + 1;
                     }
                 }
+                printf("illa2\n");
+                displayHashMap(cluPtrIn[3], numUniqueClusters);
                 /* Dont understand the point of this now
                 omp_unset_lock(&nlocks[C[i]]); // Unlocking the cluster
                 */
             } // End of if
         } // End of for(j)
-        free(temp);
+        //free(temp);
     }// End of for(i)
     //Prefix sum:
     for(long i=0; i<NV_out; i++) {
@@ -2172,11 +2189,24 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
         Added[i] = 0;
     }
 
+    for (long i = 0; i < NV_out; i++) {
+        displayHashMap(cluPtrIn[i], NV_out);
+        for (long s = 0; s < NV_out; s++) {
+            if (!cluPtrIn[i][s]) {
+                printf("NULL i : %ld s : %ld\n", i, s);
+            } else {
+                printf("Non NULL i : %ld s : %ld\n", i, s);
+                printf("key : %ld\n", cluPtrIn[i][s]->key);
+                printf("value : %ld\n", cluPtrIn[i][s]->data);
+            }
+        }
+    } 
+
     //Now add the edges in no particular order
     //#pragma omp parallel for
     dataItem* temp = (dataItem*)malloc(sizeof(dataItem));
     for (long i = 0; i < NV_out; i++) {
-        printf("i : %ld\n", i);
+        printf("step 3 : i : %ld\n", i);
         long j = 0;
         long Where;
         temp = cluPtrIn[i][j];
@@ -2184,6 +2214,7 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
         while (j < numUniqueClusters) {
             // Don't understand the point of this right now
             // Where = vtxPtrOut[i] + __sync_fetch_and_add(&Added[i], 1);
+            printf("I am here\n");
             printf("j : %ld\n", j);
             if (temp != NULL) {
             Where = vtxPtrOut[i] + Added[i]++;
@@ -2210,7 +2241,7 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
             temp = cluPtrIn[i][j];
         } // End of while
     } // End of for(i)
-    free(temp);
+    //free(temp);
 
     time2 = clock();
     TotTime += (double)(time2-time1)/CLOCKS_PER_SEC;
@@ -2232,9 +2263,10 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
     // Don't understand the point of it right now
     //#pragma omp parallel for
     for (long i=0; i<numUniqueClusters; i++) {
-        freeHashArr(cluPtrIn[i], sizeArr[i]);    
+        freeHashArr(cluPtrIn[i], numUniqueClusters);    
     }
     free(cluPtrIn);
+            printf("I am here\n");
 
     //#pragma omp parallel for
     /*

@@ -33,8 +33,8 @@ int main(int argc, char* argv[])
 	
 	//Allocating space to pre-generate numOfIter random (x,y) between (0,0) and (1,1)
 	float *x, *y;
-        posix_memalign((void**)&x, 64, sizeof(float)*numOfIter);
-        posix_memalign((void**)&y, 64, sizeof(float)*numOfIter);
+    posix_memalign((void**)&x, 64, sizeof(float)*numOfIter);
+    posix_memalign((void**)&y, 64, sizeof(float)*numOfIter);
 	
 	unsigned long long t0 = 0;
 	unsigned long long t1 = 0;
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 	float cycles = (float)(sum)/(float)(runs);
     printf("Modularity: %f\n", modularity/runs);
 	//Empirical peak = (Base Freq x Num of FLOPs)/Recorded number of cycles 
-	float gflops = 2.4 * numOfIter * 4 / cycles;
+	float gflops = 2.4 * numOfIter * 3 / cycles;
 	printf("GFLOPS : %f\n", gflops);
 	free(x);
 	free(y);
