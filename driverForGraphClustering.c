@@ -15,7 +15,7 @@
 //#define DEBUG
 //#define DEBUG_VF
 //#define DEBUG_SEARCH
-//
+
 // struct : community
 typedef struct comm {
     long size;
@@ -839,7 +839,7 @@ long countTokens(char* line, char* delimiter) {
                 }
             }
         } // end of for
-        displayHashMap(hashArr, size);
+        //displayHashMap(hashArr, size);
         freeHashArr(hashArr, size);
         //free(temp);
         start = clock() - start;
@@ -1003,18 +1003,18 @@ for (long i = 0; i < NV_in; i++) {
             printf("temp is %p\n", temp);
 
 #endif
-            printf("Dude\n");
-            printf("sizeArr[0] : %ld\n", sizeArr[0]);
-            displayHashMap(cluPtrIn[0], sizeArr[0]);
-            printf("Dude\n");
+            //printf("Dude\n");
+            //printf("sizeArr[0] : %ld\n", sizeArr[0]);
+            //displayHashMap(cluPtrIn[0], sizeArr[0]);
+            //printf("Dude\n");
             if (temp != NULL) {
-                displayHashMap(cluPtrIn[C[i]], sizeArr[C[i]]);
+                //displayHashMap(cluPtrIn[C[i]], sizeArr[C[i]]);
                 temp->data += (long)vtxIndIn[j].weight;
-                displayHashMap(cluPtrIn[C[i]], sizeArr[C[i]]);
-                printf("C[i] is %ld\n", C[i]);
-                printf("C[tail] is %ld\n", C[tail]);
-                printf("i is %ld\n", i);
-                printf("temp->data : %ld\n", temp->data);
+                //displayHashMap(cluPtrIn[C[i]], sizeArr[C[i]]);
+                //printf("C[i] is %ld\n", C[i]);
+                //printf("C[tail] is %ld\n", C[tail]);
+                //printf("i is %ld\n", i);
+                //printf("temp->data : %ld\n", temp->data);
             } else {
 #ifdef DEBUG_B
                 printf("inside j : %ld and edge weight is vtxIndIn[%ld].weight : %ld\n", j, j, (long)vtxIndIn[j].weight);
@@ -1041,7 +1041,7 @@ for (long i = 0; i < NV_in; i++) {
                */
         } // End of if
     } // End of for(j)
-    displayHashMap(cluPtrIn[C[i]], sizeArr[C[i]]);
+    //displayHashMap(cluPtrIn[C[i]], sizeArr[C[i]]);
 #ifdef DEBUG_B
     displayHashMap(cluPtrIn[C[i]], sizeArr[C[i]]);
     printf("NE_self : %ld\n", NE_self);
@@ -1049,9 +1049,11 @@ for (long i = 0; i < NV_in; i++) {
 #endif
     //free(temp);
 } // End of for(i)
+/*
 for (long n = 0; n < NV_out; n++) {
     displayHashMap(cluPtrIn[n], sizeArr[n]);
 }
+*/
 // Prefix sum:
 for (long i = 0; i < NV_out; i++) {
 #ifdef DEBUG_B
@@ -1098,10 +1100,10 @@ for (long i = 0; i < NV_out; i++) {
     long j = 0;
     long Where;
     temp = cluPtrIn[i][j];
-    printf("i : %ld j : %ld\n",  i, j);
-    printf("sizeArr[i] : %ld\n", sizeArr[i]);
-    printf("temp->data : %ld\n", temp->data);
-    displayHashMap(cluPtrIn[i], sizeArr[i]);
+    //printf("i : %ld j : %ld\n",  i, j);
+    //printf("sizeArr[i] : %ld\n", sizeArr[i]);
+    //printf("temp->data : %ld\n", temp->data);
+    //displayHashMap(cluPtrIn[i], sizeArr[i]);
     // Now go through the other edges
     while (j < sizeArr[i]) {
         // Don't understand the point of this right now
@@ -1119,7 +1121,6 @@ for (long i = 0; i < NV_out; i++) {
         printf("tail : %ld\n", temp->key);
 #endif
         vtxIndOut[Where].weight = temp->data; // Weight
-        printf("head : %ld  tail : %ld  weight : %ld\n", i, temp->key, temp->data);
 #ifdef DEBUG_B
         printf("head : %ld  tail : %ld  weight : %ld\n", i, temp->key, temp->data);
 #endif
@@ -1501,20 +1502,20 @@ long buildLocalMapCounter(long adj1, long adj2, dataItem** clusterLocalMap,
         }
         temp = search(currCommAss[vtxInd[j].tail], size, clusterLocalMap); // check if it already exists
         if (temp != NULL) { // Already exists
-            printf("I am here\n");
-            printf("temp->data : %ld ,  Counter[temp->data] : %lf\n",  temp->data,Counter[temp->data]);
-            printf("vtxInd[j].weight : %lf\n", vtxInd[j].weight);
+            //printf("I am here\n");
+            //printf("temp->data : %ld ,  Counter[temp->data] : %lf\n",  temp->data,Counter[temp->data]);
+            //printf("vtxInd[j].weight : %lf\n", vtxInd[j].weight);
             Counter[temp->data] += vtxInd[j].weight; //Increment the counter with weight
-            printf("temp->data : %ld ,  Counter[temp->data] : %lf\n",  temp->data,Counter[temp->data]);
+            //printf("temp->data : %ld ,  Counter[temp->data] : %lf\n",  temp->data,Counter[temp->data]);
         } else {
             insert(currCommAss[vtxInd[j].tail], numUniqueClusters, size, clusterLocalMap); // Doesn't exist, add to the map
             Counter[numUniqueClusters] = vtxInd[j].weight;
             numUniqueClusters++;
         }
     } //End of for(j)
-    printf("returning %lf\n", Counter[0]);
-    printf("returning %ld\n", (long)Counter[0]);
-    printf("returing selfloop : %ld\n", selfLoop);
+    //printf("returning %lf\n", Counter[0]);
+    //printf("returning %ld\n", (long)Counter[0]);
+    //printf("returing selfloop : %ld\n", selfLoop);
     return selfLoop;
 } //End of buildLocalMapCounter()
 
@@ -1531,8 +1532,8 @@ long max(dataItem** clusterLocalMap, double* Counter,
     
     long j = 0;
     temp = clusterLocalMap[0];
-    displayHashMap(clusterLocalMap, size);
-    printf("I am sc : %ld\n", sc);
+    //displayHashMap(clusterLocalMap, size);
+    //printf("I am sc : %ld\n", sc);
     while (j < size) {
         if(temp != NULL && sc != temp->key) {
             ay = cInfo[temp->key].degree; // degree of cluster y
@@ -1578,9 +1579,7 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
     long    NE        = G->numEdges;
     long    *vtxPtr   = G->edgeListPtrs;
     edge    *vtxInd   = G->edgeList;
-    for (int n = 0; n < NE; n++) {
-        printf("vtxInd[n].weight : %lf\n", vtxInd[n].weight);
-    }
+    
     /* Variables for computing modularity */
     long totalEdgeWeightTwice;
     double constantForSecondTerm;
@@ -1674,10 +1673,10 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
                     //Find unique cluster ids and #of edges incident (eicj) to them
                     selfLoop = buildLocalMapCounter(adj1, adj2, clusterLocalMap, Counter, vtxInd, currCommAss, i, NV);
                     // Update delta Q calculation
-                    printf("got %lf\n", Counter[0]);
-                    printf("clusterWeightInternal[i] %ld\n", clusterWeightInternal[i]);
+                    //printf("got %lf\n", Counter[0]);
+                    //printf("clusterWeightInternal[i] %ld\n", clusterWeightInternal[i]);
                     clusterWeightInternal[i] += (long)Counter[0]; //(e_ix)
-                    printf("clusterWeightInternal[i], i : %ld, %ld\n", clusterWeightInternal[i], i);
+                    //printf("clusterWeightInternal[i], i : %ld, %ld\n", clusterWeightInternal[i], i);
                     //Calculate the max
                     targetCommAss[i] = max(clusterLocalMap, Counter, selfLoop, cInfo, vDegree[i], currCommAss[i], constantForSecondTerm, size);
                 } else {
@@ -1686,12 +1685,12 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
 
                 //Update
                 if(targetCommAss[i] != currCommAss[i]  && targetCommAss[i] != -1) {
-                    printf("I am here uouo\n");
-                    printf("Inside here, targetCommAss[i] : %ld\n", targetCommAss[i]);
-                    printf("cUpdate[targetCommAss[i]].degree : %ld, vDegree[i] : %ld\n", cUpdate[targetCommAss[i]].degree, vDegree[i]);
+                    //printf("I am here uouo\n");
+                    //printf("Inside here, targetCommAss[i] : %ld\n", targetCommAss[i]);
+                    //printf("cUpdate[targetCommAss[i]].degree : %ld, vDegree[i] : %ld\n", cUpdate[targetCommAss[i]].degree, vDegree[i]);
                     //__sync_fetch_and_add(&cUpdate[targetCommAss[i]].degree, vDegree[i]);
                     cUpdate[targetCommAss[i]].degree += vDegree[i];
-                    printf("cUpdate[targetCommAss[i]].degree : %ld, vDegree[i] : %ld\n", cUpdate[targetCommAss[i]].degree, vDegree[i]);
+                    //printf("cUpdate[targetCommAss[i]].degree : %ld, vDegree[i] : %ld\n", cUpdate[targetCommAss[i]].degree, vDegree[i]);
                     //__sync_fetch_and_add(&cUpdate[targetCommAss[i]].size, 1);
                     cUpdate[targetCommAss[i]].size += 1;
                     //__sync_fetch_and_sub(&cUpdate[currCommAss[i]].degree, vDegree[i]);
@@ -1715,7 +1714,6 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
             e_xx += (double)clusterWeightInternal[i];
             a2_x += (cInfo[i].degree)*(cInfo[i].degree);
         }
-        printf("e_xx : %lf\n", e_xx);
         time4 = clock();
 
         currMod = (e_xx*(double)constantForSecondTerm) - (a2_x*(double)constantForSecondTerm*(double)constantForSecondTerm);
@@ -1738,7 +1736,7 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
         }
         //#pragma omp parallel for
         for (long i=0; i<NV; i++) {
-            printf("cInfo[i].size , cInfo[i].degree : %ld, %ld\n", cInfo[i].size, cInfo[i].degree);
+            //printf("cInfo[i].size , cInfo[i].degree : %ld, %ld\n", cInfo[i].size, cInfo[i].degree);
             cInfo[i].size += cUpdate[i].size;
             cInfo[i].degree += cUpdate[i].degree;
         }
@@ -2151,10 +2149,11 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
         }
     }
     */
-
+    /*
     for (long i = 0; i < numUniqueClusters; i++) {
         displayHashMap(cluPtrIn[C[i]], numUniqueClusters);
     }
+    */
 
     for (long i = 0; i < NV_in; i++) {
         long adj1 = vtxPtrIn[i];
@@ -2173,7 +2172,7 @@ double buildNextLevelGraphOpt(graph *Gin, graph *Gout, long *C, long numUniqueCl
                 omp_set_lock(&nlocks[C[i]]);  // Locking the cluster
             */
                 temp = search(C[tail], numUniqueClusters, cluPtrIn[C[i]]);
-                displayHashMap(cluPtrIn[3], numUniqueClusters);
+                //displayHashMap(cluPtrIn[3], numUniqueClusters);
                 
                 if (temp != NULL) {
                     //printf("C[tail] is %ld and i is %ld and C[i] is %ld\n", C[tail], i, C[i]);
