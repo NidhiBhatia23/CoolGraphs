@@ -1655,6 +1655,10 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
     //use for Modularity calculation (eii)
     long* clusterWeightInternal = (long*) malloc (NV*sizeof(long)); 
     assert(clusterWeightInternal != 0);
+    float* clusterWeightInternalDouble = (float*)malloc(NV * sizeof(float));
+    assert(clusterWeightInternalDouble != 0);
+    float* cInfoDouble = (float*)malloc(NV * sizeof(float));
+    assert(cInfoDouble != 0);
     sumVertexDegree(vtxInd, vtxPtr, vDegree, NV , cInfo); // Sum up the vertex degree
     /*** Compute the total edge weight (2m) and 1/2m ***/
     constantForSecondTerm = calConstantForSecondTerm(vDegree, NV); // 1 over sum of the degree
@@ -1760,16 +1764,26 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
 
         time3 = omp_get_wtime();
 
-        double e_xx = 0;
-        double a2_x = 0;
-        //#pragma omp parallel for reduction(+:e_xx) reduction(+:a2_x)
+        for (long i = 0; i < NV; i++) {
+            clusterWeightInternalDouble[i] = (float)clusterWeightInternal[i] * (float)constantForSecondTerm;
+            cInfoDouble[i] = (float)cInfo[i].degree * (float)constantForSecondTerm;
+        }
+
+        //double e_xx = 0;
+        //double a2_x = 0;
+        float modSum = 0;
+        //#pragma omp parallel for reduction(+:modSum)
         for (long i=0; i<NV; i++) {
-            e_xx += (double)clusterWeightInternal[i];
-            a2_x += (cInfo[i].degree)*(cInfo[i].degree);
+            modSum += clusterWeightInternalDouble[i] - cInfoDouble[i]*cInfoDouble[i]; 
+            //e_xx += (double)clusterWeightInternal[i];
+            //a2_x += (cInfo[i].degree)*(cInfo[i].degree);
         }
         time4 = omp_get_wtime();
 
-        currMod = (e_xx*(double)constantForSecondTerm) - (a2_x*(double)constantForSecondTerm*(double)constantForSecondTerm);
+        //currMod = (e_xx*(double)constantForSecondTerm) - (a2_x*(double)constantForSecondTerm*(double)constantForSecondTerm);
+        currMod = (double)modSum;
+
+
         totItr = (time2-time1) + (time4-time3);
 
         total += totItr;
@@ -1828,6 +1842,8 @@ double parallelLouvianMethod(graph *G, long *C, int nThreads, double Lower,
     free(cInfo);
     free(cUpdate);
     free(clusterWeightInternal);
+    free(clusterWeightInternalDouble);
+    free(cInfoDouble);
 
     return prevMod;
 }
@@ -1861,7 +1877,7 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
     long* currCommAss;      //Store current community assignment
     //long* targetCommAss;  //Store the target of community assignment
     long* vDegree;  //Store each vertex's degree
-    long* clusterWeightInternal;//use for Modularity calculation (eii)
+    float* clusterWeightInternal;//use for Modularity calculation (eii)
 
     /* Indexs are community */
     comm* cInfo;     //Community info. (ai and size)
@@ -1890,6 +1906,7 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
     assert(cInfo != 0);
     cUpdate = (comm*)malloc(NV*sizeof(comm)); 
     assert(cUpdate != 0);
+    float* cInfoDouble = (float*)malloc(NV * sizeof(float));
 
     sumVertexDegree(vtxInd, vtxPtr, vDegree, NV , cInfo);   // Sum up the vertex degree
     /*** Compute the total edge weight (2m) and 1/2m ***/
@@ -1904,7 +1921,7 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
     /*** Assign each vertex to its own Community ***/
     initCommAss( pastCommAss, currCommAss, NV);
 
-    clusterWeightInternal = (long*) malloc (NV*sizeof(long)); 
+    clusterWeightInternal = (float*) malloc (NV*sizeof(float)); 
     assert(clusterWeightInternal != 0);
 
     /*** Create a CSR-like datastructure for vertex-colors ***/
@@ -2039,8 +2056,10 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
         time2 = omp_get_wtime();
 
         time3 = omp_get_wtime();
-        double e_xx = 0;
-        double a2_x = 0;
+        //double e_xx = 0;
+        //double a2_x = 0;
+        float modSum = 0;
+
         // CALCULATE MOD
         // #pragma omp parallel for  //Parallelize on each vertex
         for (long i =0; i<NV;i++){
@@ -2052,17 +2071,25 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
             long adj2 = vtxPtr[i+1];
             for(long j=adj1; j<adj2; j++) {
                 if(currCommAss[vtxInd[j].tail] == currCommAss[i]){
-                    clusterWeightInternal[i] += (long)vtxInd[j].weight;
+                    clusterWeightInternal[i] += ((float)vtxInd[j].weight * (float)constantForSecondTerm);
                 }
             }
         }
-        // #pragma omp parallel for reduction(+:e_xx) reduction(+:a2_x)
+
         for (long i=0; i<NV; i++) {
-            e_xx += clusterWeightInternal[i];
-            a2_x += (cInfo[i].degree)*(cInfo[i].degree);
+            cInfoDouble[i] = (float)cInfo[i].degree * (float)constantForSecondTerm;
+        }
+
+        //#pragma omp parallel for reduction(+:modSum) 
+        for (long i=0; i<NV; i++) {
+            //e_xx += clusterWeightInternal[i];
+            //a2_x += (cInfo[i].degree)*(cInfo[i].degree);
+            modSum += clusterWeightInternal[i] - cInfoDouble[i] * cInfoDouble[i];
         }
         time4 = omp_get_wtime();
-        currMod = e_xx*(double)constantForSecondTerm  - a2_x*(double)constantForSecondTerm*(double)constantForSecondTerm;
+        //currMod = e_xx*(double)constantForSecondTerm  - a2_x*(double)constantForSecondTerm*(double)constantForSecondTerm;
+        currMod = (double)modSum;
+
 
         totItr = (time2-time1) + (time4-time3);
         total += totItr;
@@ -2093,6 +2120,7 @@ double algoLouvainWithDistOneColoring(graph* G, long *C, int nThreads, int* colo
     free(colorIndex);
     free(colorAdded);
     free(pastCommAss);
+    free(cInfoDouble);
 
     return prevMod;
 } //End of algoLouvainWithDistOneColoring()
@@ -2574,12 +2602,10 @@ int main(int argc, char** argv) {
     int nT = 1; // default number of threads is 1
     // Check for number of threads
     // Dont understand the point of it now
-    /*
-#pragma omp parallel 
-{
-nT = omp_get_num_threads();
-}
-*/
+    #pragma omp parallel 
+    {
+        nT = omp_get_num_threads();
+    }
     /*
      * I don't understand the point why number of threads need to be more than 1
      * Check if out soon
@@ -2659,8 +2685,6 @@ end = rdtsc();
 sum = (end - start);
 
 printf("Recorded number of cycles : %lld\n", sum);
-    
-
 
 //Check if cluster ids need to be written to a file:
 if( inputParams->output ) {

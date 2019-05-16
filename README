@@ -1,2 +1,8 @@
-To run:
-./driverForGraphClustering -v -o -c -m 10 -f 5 karate.graph
+export OMP_NUM_THREADS=2
+
+To run serial implementation:
+./driverForGraphClustering -v -o -m 10 -f 5 karate.graph
+
+To run parallel implementation:
+./driverForGraphClusteringParallel -v -o -m 10 -f 5 karate.graph
+
